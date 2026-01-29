@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+Verificador de Conectividad Web - Aplicación Streamlit
+"""
+
 import streamlit as st
 from connectivity_checker import URLManager
 
@@ -121,13 +126,23 @@ if submitted:
         if protocol == "Manual" and extension == "Manual" and port == "Manual":
             full_url = url  # Usa exactamente lo que escribió el usuario
         else:
-            full_url = url_manager.build_url()
+            # check_connectivity() construirá la URL internamente
+            full_url = None
         
         # Mostrar URL que se va a verificar y enlace para abrir
-        link_button.markdown(f"[Abrir]({full_url})")
+        if full_url:
+            link_button.markdown(f"[Abrir]({full_url})")
+        else:
+            # check_connectivity() construirá y usará la URL
+            pass
         
-        with st.spinner(f"Verificando conectividad a {full_url} ..."):
+        with st.spinner(f"Verificando conectividad..."):
             status_type, message = url_manager.check_connectivity()
+            
+            # Obtener la URL final que se usó para la verificación
+            if not full_url:
+                full_url = url_manager.final_url
+                link_button.markdown(f"[Abrir]({full_url})")
 
 # ==============================================================================
 # 3. VISUALIZACIÓN - Mostrar resultados
@@ -156,3 +171,6 @@ if submitted and url and status_type and message:
 #     st.code(f"Reintentos: {retries}")
 #     st.code(f"Redirects: {allow_redirects}")
 #     st.code(f"SSL Verify: {verify_ssl}")
+
+if __name__ == "__main__":
+    print("Ejecuta con: streamlit run main.py")
