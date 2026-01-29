@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+URLManager - Clase para construir URLs y verificar conectividad
+"""
+
 import requests
 
 class URLManager:
@@ -35,16 +40,24 @@ class URLManager:
         Verifica la conectividad de una URL
 
         Steps:
-            1. Hacer la petición HTTP
-            2. Analizar el status code
-            3. Guardar el resultado
+            1. Construir la URL final
+            2. Hacer la petición HTTP
+            3. Analizar el status code
+            4. Guardar el resultado
             
         Returns:
             tuple: (estado, mensaje)
         """
         
+        # Construir la URL final primero
+        self.final_url = self.build_url()
+        
         status_dict = {
             200: ("Éxito", f"✅ Conexión exitosa"),
+            301: ("Advertencia", f"🔄 Redirección permanente"),
+            302: ("Advertencia", f"🔄 Redirección temporal"),
+            307: ("Advertencia", f"🔄 Redirección temporal"),
+            308: ("Advertencia", f"🔄 Redirección permanente"),
             400: ("Advertencia", f"❌ Solicitud incorrecta"),
             401: ("Advertencia", f"🔒 No autorizado"),
             403: ("Error", f"🚫 Acceso denegado"),
@@ -105,11 +118,10 @@ class URLManager:
         
         Steps:
             1. Validar que la URL base exista
-            2. Limpiar la URL base de protocolos existentes
-            3. Crear lista de componentes en orden de construcción
-            4. Crear lista de componentes procesados
-            5. Iterar y añadir componentes que no sean None
-            6. Unir componentes con '/' y retornar
+            2. Crear lista de componentes en orden de construcción
+            3. Crear lista de componentes procesados
+            4. Iterar y añadir componentes que no sean None
+            5. Unir componentes con '/' y retornar
 
         Returns:
             str: URL completa construida
@@ -117,11 +129,9 @@ class URLManager:
         if not self.base_url:
             return None
         
-        cleaned_url = self.base_url.replace('http://', '').replace('https://', '').strip('/')
-        
         components = [
             self.protocol,
-            cleaned_url,
+            self.base_url,
             self.extension,
             f":{self.port}" if self.port is not None else None,
             self.path if self.path else None
@@ -136,3 +146,10 @@ class URLManager:
         self.final_url = "".join(url_components)
 
         return self.final_url
+
+if __name__ == "__main__":
+    url_manager = URLManager()
+    url_manager.set_url_settings("https://", None, "/get", None, "httpbin.org")
+    url_manager.set_connectivity_settings(5, 1, True, True)
+    status_type, message = url_manager.check_connectivity()
+    print(status_type, " - ", message)
