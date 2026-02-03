@@ -15,12 +15,12 @@ class URLManager(BaseManager):
     def __init__(self):
         super().__init__()
         self.protocol = None
-        self.base_url = None
+        self.url_address = None
         self.port = None
         self.path = None
         self.extension = None
 
-    def set_settings(self, protocol=None, port=None, path=None, extension=None, base_url=None, timeout=None, retries=None, allow_redirects=None, verify_ssl=None):
+    def set_settings(self, protocol=None, port=None, path=None, extension=None, url_address=None, timeout=None, retries=None, allow_redirects=None, verify_ssl=None):
         """
         Configurar los componentes de la URL y los parámetros de conectividad
         
@@ -29,7 +29,7 @@ class URLManager(BaseManager):
             port (int, optional): Puerto. Defaults to None.
             path (str, optional): Ruta. Defaults to None.
             extension (str, optional): Extensión. Defaults to None.
-            base_url (str, optional): URL base. Defaults to None.
+            url_address (str, optional): URL base. Defaults to None.
             timeout (int, optional): Tiempo máximo de espera en segundos. Defaults to None
             retries (int, optional): Número de reintentos. Defaults to None
             allow_redirects (bool, optional): Permitir redirecciones. Defaults to None
@@ -37,7 +37,7 @@ class URLManager(BaseManager):
         """
         # Componentes de la URL
         self.protocol = protocol
-        self.base_url = base_url
+        self.url_address = url_address
         self.port = port
         self.path = path
         self.extension = extension
@@ -49,7 +49,7 @@ class URLManager(BaseManager):
         self.verify_ssl = verify_ssl
 
         # Clase base
-        self.target = base_url
+        self.target = url_address
         return
 
     def build_target(self):
@@ -58,41 +58,36 @@ class URLManager(BaseManager):
         
         Steps:
             1. Validar que la URL base exista
-            2. Crear lista de componentes en orden de construcción
-            3. Crear lista de componentes procesados
-            4. Iterar y añadir componentes que no sean None
-            5. Unir componentes con '/' y retornar
+            2. Crear lista de componentes en orden de construcción y procesarla
+            3. Unir componentes con '/' y retornar
 
         Returns:
             str: URL completa construida
         """
-        if not self.base_url:
+        if not self.url_address:
             return None
         
         components = [
             self.protocol,
-            self.base_url,
+            self.url_address,
             self.extension,
             f":{self.port}" if self.port is not None else None,
             self.path if self.path else None
         ]
-        
         url_components = []
-
         for component in components:
             if component is not None:
                 url_components.append(component)
         
-        self.final_url = "".join(url_components)
-
-        return self.final_url
+        self.final_target = "".join(url_components)
+        return self.final_target
 
     def check_connectivity(self):
         """
         Verifica la conectividad de una URL
 
         Steps:
-            1. Construir la URL final
+            1. Validar que la dirección final exista
             2. Hacer la petición HTTP
             3. Analizar el status code
             4. Guardar el resultado
@@ -100,9 +95,9 @@ class URLManager(BaseManager):
         Returns:
             tuple: (estado, mensaje)
         """
-        # Si no se ha construido la URL final, construirla
-        if not self.final_url:
-            self.final_url = self.build_target()
+        # Si no se ha construido la dirección final, construirla
+        if not self.final_target:
+            self.final_target = self.build_target()
         
         status_dict = {
             200: ("Éxito", f"✅ Conexión exitosa"),
@@ -118,7 +113,7 @@ class URLManager(BaseManager):
 
         try:
             response = requests.get(
-                self.final_url, 
+                self.final_target, 
                 timeout=self.timeout, 
                 allow_redirects=self.allow_redirects,
                 verify=self.verify_ssl
