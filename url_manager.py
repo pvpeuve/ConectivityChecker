@@ -1,39 +1,91 @@
 #!/usr/bin/env python3
-"""
-URLManager - Clase para construir URLs y verificar conectividad
-"""
-
 import requests
+from base_manager import BaseManager
 
-class URLManager:
+class URLManager(BaseManager):
+    """
+    Clase para construir URLs y verificar conectividad
+
+    Methods:
+        set_settings: Configura la estructura de la URL y los parámetros de conectividad
+        check_connectivity: Verifica la conectividad de una URL
+        build_target: Construye la URL final
+
+    """
     def __init__(self):
+        super().__init__()
+        self.protocol = None
+        self.base_url = None
+        self.port = None
+        self.path = None
+        self.extension = None
+
+    def set_settings(self, protocol=None, port=None, path=None, extension=None, base_url=None, timeout=None, retries=None, allow_redirects=None, verify_ssl=None):
         """
-        Inicializa el manejador de URLs
-
-        Methods:
-            set_connectivity_settings: Configura los parámetros de conectividad
-            set_url_settings: Establece la URL a verificar
-            check_connectivity: Verifica la conectividad de una URL
-            build_url: Construye la URL final
-
-        """
-        return
-
-    def set_connectivity_settings(self, timeout=None, retries=None, allow_redirects=None, verify_ssl=None):
-        """
-        Configura los parámetros de conectividad
-
+        Configurar los componentes de la URL y los parámetros de conectividad
+        
         Args:
+            protocol (str, optional): Protocolo. Defaults to None.
+            port (int, optional): Puerto. Defaults to None.
+            path (str, optional): Ruta. Defaults to None.
+            extension (str, optional): Extensión. Defaults to None.
+            base_url (str, optional): URL base. Defaults to None.
             timeout (int, optional): Tiempo máximo de espera en segundos. Defaults to None
             retries (int, optional): Número de reintentos. Defaults to None
             allow_redirects (bool, optional): Permitir redirecciones. Defaults to None
             verify_ssl (bool, optional): Verificar certificados SSL. Defaults to None
         """
+        # Componentes de la URL
+        self.protocol = protocol
+        self.base_url = base_url
+        self.port = port
+        self.path = path
+        self.extension = extension
+
+        # Parámetros de conectividad
         self.timeout = timeout
         self.retries = retries
         self.allow_redirects = allow_redirects
         self.verify_ssl = verify_ssl
+
+        # Clase base
+        self.target = base_url
         return
+
+    def build_target(self):
+        """
+        Construye URL completa con los componentes guardados en la clase
+        
+        Steps:
+            1. Validar que la URL base exista
+            2. Crear lista de componentes en orden de construcción
+            3. Crear lista de componentes procesados
+            4. Iterar y añadir componentes que no sean None
+            5. Unir componentes con '/' y retornar
+
+        Returns:
+            str: URL completa construida
+        """
+        if not self.base_url:
+            return None
+        
+        components = [
+            self.protocol,
+            self.base_url,
+            self.extension,
+            f":{self.port}" if self.port is not None else None,
+            self.path if self.path else None
+        ]
+        
+        url_components = []
+
+        for component in components:
+            if component is not None:
+                url_components.append(component)
+        
+        self.final_url = "".join(url_components)
+
+        return self.final_url
 
     def check_connectivity(self):
         """
@@ -48,9 +100,9 @@ class URLManager:
         Returns:
             tuple: (estado, mensaje)
         """
-        
-        # Construir la URL final primero
-        self.final_url = self.build_url()
+        # Si no se ha construido la URL final, construirla
+        if not self.final_url:
+            self.final_url = self.build_target()
         
         status_dict = {
             200: ("Éxito", f"✅ Conexión exitosa"),
@@ -93,63 +145,9 @@ class URLManager:
             self.result = ("Error", f"❌ Error de solicitud: {str(e)}")
 
         return self.result
-    
-    def set_url_settings(self, protocol=None, port=None, path=None, extension=None, base_url=None):
-        """
-        Configura los componentes de la URL
-        
-        Args:
-            protocol (str, optional): Protocolo. Defaults to None.
-            port (int, optional): Puerto. Defaults to None.
-            path (str, optional): Ruta. Defaults to None.
-            extension (str, optional): Extensión. Defaults to None.
-            base_url (str, optional): URL base. Defaults to None.
-        """
-        self.protocol = protocol
-        self.base_url = base_url
-        self.port = port
-        self.path = path
-        self.extension = extension
-        return
-
-    def build_url(self):
-        """
-        Construye URL completa con los componentes guardados en la clase
-        
-        Steps:
-            1. Validar que la URL base exista
-            2. Crear lista de componentes en orden de construcción
-            3. Crear lista de componentes procesados
-            4. Iterar y añadir componentes que no sean None
-            5. Unir componentes con '/' y retornar
-
-        Returns:
-            str: URL completa construida
-        """
-        if not self.base_url:
-            return None
-        
-        components = [
-            self.protocol,
-            self.base_url,
-            self.extension,
-            f":{self.port}" if self.port is not None else None,
-            self.path if self.path else None
-        ]
-        
-        url_components = []
-
-        for component in components:
-            if component is not None:
-                url_components.append(component)
-        
-        self.final_url = "".join(url_components)
-
-        return self.final_url
 
 if __name__ == "__main__":
     url_manager = URLManager()
-    url_manager.set_url_settings("https://", None, "/get", None, "httpbin.org")
-    url_manager.set_connectivity_settings(5, 1, True, True)
+    url_manager.set_settings("https://", None, "/get", None, "httpbin.org", 5, 1, True, True)
     status_type, message = url_manager.check_connectivity()
     print(status_type, " - ", message)
