@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-Pruebas de conectividad usando httpbin.org para verificar diferentes escenarios
+Pruebas de URLManager y conectividad HTTP
 """
 
 import pytest
-from connectivity_checker import URLManager
+import requests
+from url_manager import URLManager
+from status_codes_dicts import HTTP_STATUS_DICT
+from unittest.mock import patch
 
 class TestURLExamples:
     """Pruebas de construcción de URLs con diferentes componentes"""
@@ -14,7 +17,7 @@ class TestURLExamples:
         """Fixture para crear instancia de URLManager"""
         return URLManager()
     
-    def test_url_construction_basic(self, url_manager):
+    def test_build_url_basic(self, url_manager):
         """Prueba construcción básica de URLs"""
         test_cases = [
             ("https://", "example.com", None, "", "https://example.com"),
@@ -25,217 +28,143 @@ class TestURLExamples:
         ]
         
         for protocol, base_url, port, path, expected in test_cases:
-            url_manager.set_url_settings(protocol, port, path, None, base_url)
-            constructed_url = url_manager.build_url()
+            url_manager.set_settings(protocol, port, path, None, base_url, None, None, None, None)
+            constructed_url = url_manager.build_target()
             
             assert constructed_url == expected
             print(f"✅ URL construida: {constructed_url}")
     
-    def test_url_construction_edge_cases(self, url_manager):
+    def test_build_url_edge_cases(self, url_manager):
         """Prueba casos extremos de construcción de URLs"""
         # Protocolo manual
-        url_manager.set_url_settings(None, None, None, None, "https://manual.com/path")
-        constructed_url = url_manager.build_url()
+        url_manager.set_settings(None, None, None, None, "https://manual.com/path", None, None, None, None)
+        constructed_url = url_manager.build_target()
         assert constructed_url == "https://manual.com/path"
         
         # Puerto estándar (el método es genérico, incluye el puerto)
-        url_manager.set_url_settings("https://", 443, "/get", None, "example.com")
-        constructed_url = url_manager.build_url()
+        url_manager.set_settings("https://", 443, "/get", None, "example.com", None, None, None, None)
+        constructed_url = url_manager.build_target()
         assert constructed_url == "https://example.com:443/get"
         
         # Puerto no estándar
-        url_manager.set_url_settings("https://", 8443, "/get", None, "example.com")
-        constructed_url = url_manager.build_url()
+        url_manager.set_settings("https://", 8443, "/get", None, "example.com", None, None, None, None)
+        constructed_url = url_manager.build_target()
         assert constructed_url == "https://example.com:8443/get"
         
         # Puerto 80 con HTTP
-        url_manager.set_url_settings("http://", 80, "/", None, "localhost")
-        constructed_url = url_manager.build_url()
+        url_manager.set_settings("http://", 80, "/", None, "localhost", None, None, None, None)
+        constructed_url = url_manager.build_target()
         assert constructed_url == "http://localhost:80/"
         
         # Protocolo no web (ejemplo FTP)
-        url_manager.set_url_settings("ftp://", 21, "/files", None, "ftp.server.com")
-        constructed_url = url_manager.build_url()
+        url_manager.set_settings("ftp://", 21, "/files", None, "ftp.server.com", None, None, None, None)
+        constructed_url = url_manager.build_target()
         assert constructed_url == "ftp://ftp.server.com:21/files"
         
         print("✅ Todos los casos extremos funcionan correctamente")
 
-
 class TestConnectivityExamples:
-    """Pruebas de conectividad con ejemplos reales de httpbin.org"""
-    
+    """Pruebas de conectividad HTTP"""
+
     @pytest.fixture
     def url_manager(self):
         """Fixture para crear instancia de URLManager"""
         return URLManager()
-    
-    @pytest.fixture
-    def httpbin_base(self):
-        """URL base de httpbin para pruebas"""
-        return "httpbin.org"
-    
-    def test_httpbin_get_success(self, url_manager, httpbin_base):
-        """Prueba GET exitosa a httpbin.org/get"""
-        url_manager.set_url_settings("https://", None, "/get", None, httpbin_base)
-        url_manager.set_connectivity_settings(5, 1, True, True)
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Éxito"
-        assert "200" in message
-        print(f"✅ GET exitoso: {message}")
-    
-    def test_httpbin_status_codes(self, url_manager, httpbin_base):
-        """Prueba diferentes códigos de estado HTTP"""
-        test_cases = [
-            ("/status/200", "Éxito"),
-            ("/status/400", "Advertencia"), 
-            ("/status/401", "Advertencia"),
-            ("/status/403", "Error"),
-            ("/status/404", "Error"),
-            ("/status/500", "Error")
-        ]
-        
-        for endpoint, expected_status in test_cases:
-            url_manager.set_url_settings("https://", None, endpoint, None, httpbin_base)
-            url_manager.set_connectivity_settings(5, 1, True, True)
-            
-            status_type, message = url_manager.check_connectivity()
-            
-            assert status_type == expected_status
-            print(f"✅ {endpoint}: {status_type} - {message}")
-    
-    def test_httpbin_redirects(self, url_manager, httpbin_base):
-        """Prueba redirecciones HTTP"""
-        # Probar con redirecciones permitidas
-        url_manager.set_url_settings("https://", None, "/redirect/2", None, httpbin_base)
-        url_manager.set_connectivity_settings(5, 1, True, True)  # allow_redirects=True
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Éxito"
-        print(f"✅ Redirección permitida: {message}")
-        
-        # Probar sin redirecciones permitidas
-        url_manager.set_connectivity_settings(5, 1, False, True)  # allow_redirects=False
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        # Debería ser advertencia con código 302 (redirección no seguida)
-        assert status_type == "Advertencia"
-        assert "302" in message
-        print(f"✅ Redirección no permitida: {message}")
-    
-    def test_httpbin_delay(self, url_manager, httpbin_base):
-        """Prueba timeout con respuesta lenta"""
-        # Probar con timeout corto (debería fallar)
-        url_manager.set_url_settings("https://", None, "/delay/3", None, httpbin_base)
-        url_manager.set_connectivity_settings(1, 1, True, True)  # timeout=1s
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Error"
-        assert "Timeout" in message
-        print(f"✅ Timeout correcto: {message}")
-        
-        # Probar con timeout más largo (debería funcionar)
-        url_manager.set_connectivity_settings(5, 1, True, True)  # timeout=5s
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Éxito"
-        print(f"✅ Timeout suficiente: {message}")
-    
-    def test_httpbin_ssl_verification(self, url_manager, httpbin_base):
-        """Prueba verificación SSL"""
-        # Probar con SSL verificado (debería funcionar)
-        url_manager.set_url_settings("https://", None, "/get", None, httpbin_base)
-        url_manager.set_connectivity_settings(5, 1, True, True)  # verify_ssl=True
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Éxito"
-        print(f"✅ SSL verificado: {message}")
-        
-        # Probar sin SSL verificado (debería funcionar también)
-        url_manager.set_connectivity_settings(5, 1, True, False)  # verify_ssl=False
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Éxito"
-        print(f"✅ SSL no verificado: {message}")
-    
-    def test_httpbin_different_ports(self, url_manager, httpbin_base):
-        """Prueba diferentes puertos"""
-        # Puerto 443 (HTTPS estándar)
-        url_manager.set_url_settings("https://", 443, "/get", None, httpbin_base)
-        url_manager.set_connectivity_settings(5, 1, True, True)
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Éxito"
-        print(f"✅ Puerto 443: {message}")
-        
-        # Puerto 80 (HTTP estándar)
-        url_manager.set_url_settings("http://", 80, "/get", None, httpbin_base)
-        url_manager.set_connectivity_settings(5, 1, True, True)
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Éxito"
-        print(f"✅ Puerto 80: {message}")
-    
-    def test_httpbin_invalid_paths(self, url_manager, httpbin_base):
-        """Prueba paths que no existen"""
-        url_manager.set_url_settings("https://", None, "/path/that/does/not/exist", None, httpbin_base)
-        url_manager.set_connectivity_settings(5, 1, True, True)
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Error"
-        assert "404" in message
-        print(f"✅ Path inexistente: {message}")
-    
-    def test_httpbin_invalid_domain(self, url_manager):
-        """Prueba dominio que no existe"""
-        url_manager.set_url_settings("https://", None, "/get", None, "this-domain-does-not-exist-12345.com")
-        url_manager.set_connectivity_settings(5, 1, True, True)
-        
-        status_type, message = url_manager.check_connectivity()
-        
-        assert status_type == "Error"
-        assert "DNS" in message or "no encontrado" in message
-        print(f"✅ Dominio inválido: {message}")
 
+    def test_check_connectivity_response_codes(self, url_manager):
+        """Pruebas de códigos de estado HTTP"""
+        with patch('requests.get') as mock_get:
+            # Configurar URLManager
+            url_manager.set_settings("https://", None, "/test", None, "example.com", 5, 1, True, True)
+            
+            # Prueba de éxito
+            mock_response = mock_get.return_value
+            mock_response.status_code = 200
+            status_type, message = url_manager.check_connectivity()
+            assert status_type == "Éxito"
+            assert "200" in message
+
+            # Pruebas de redirección
+            redirect_codes = [301, 302, 307, 308]
+            for code in redirect_codes:
+                mock_response.status_code = code
+                status_type, message = url_manager.check_connectivity()
+                assert status_type == "Advertencia"
+                assert str(code) in message
+
+            # Pruebas de error cliente
+            client_error_codes = [400, 401, 403, 404]
+            for code in client_error_codes:
+                mock_response.status_code = code
+                status_type, message = url_manager.check_connectivity()
+                assert status_type == "Error"
+                assert str(code) in message
+
+            # Prueba de error servidor
+            mock_response.status_code = 500
+            status_type, message = url_manager.check_connectivity()
+            assert status_type == "Error"
+            assert "500" in message
+
+        print("✅ Todos los códigos de estado HTTP funcionan correctamente")
+
+    def test_check_connectivity_exception_codes(self, url_manager):
+        """Pruebas de errores de conexión HTTP"""
+        with patch('requests.get') as mock_get:
+            # Configurar URLManager
+            url_manager.set_settings("https://", None, "/test", None, "example.com", 5, 1, True, True)
+            
+            # Prueba de excepción de Timeout
+            mock_get.side_effect = requests.exceptions.Timeout("Request timeout")
+            status_type, message = url_manager.check_connectivity()
+            assert status_type == "Error"
+            assert "Timeout" in message
+
+            # Prueba de excepción de DNS
+            mock_get.side_effect = requests.exceptions.ConnectionError("DNS resolution failed")
+            status_type, message = url_manager.check_connectivity()
+            assert status_type == "Error"
+            assert "DNS" in message or "no encontrado" in message
+
+            # Prueba de excepción de SSL
+            mock_get.side_effect = requests.exceptions.SSLError("SSL error")
+            status_type, message = url_manager.check_connectivity()
+            assert status_type == "Error"
+            assert "SSL" in message
+
+            # Prueba de conexión rechazada
+            mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
+            status_type, message = url_manager.check_connectivity()
+            assert status_type == "Error"
+            assert "rechazada" in message or "refused" in message
+
+            # Prueba de demasiados redirects
+            mock_get.side_effect = requests.exceptions.TooManyRedirects("Too many redirects")
+            status_type, message = url_manager.check_connectivity()
+            assert status_type == "Error"
+            assert "redirect" in message or "redirección" in message
+
+            # Prueba de HTTP Error
+            mock_get.side_effect = requests.exceptions.HTTPError("HTTP error")
+            status_type, message = url_manager.check_connectivity()
+            assert status_type == "Error"
+            assert "HTTP" in message
+
+        print("✅ Todos los códigos de excepción funcionan correctamente")
 
 if __name__ == "__main__":
-    # Ejecutar pruebas manualmente
-    print("🧪 Ejecutando pruebas de httpbin.org...")
-    
-    # Pruebas de URL
-    print("\n📐 Pruebas de construcción de URLs:")
-    url_tests = TestURLConstruction()
-    manager = URLManager()
-    
+    print("🧪 Ejecutando pruebas de URLManager...")
     try:
-        url_tests.test_url_construction_basic(manager)
-        url_tests.test_url_construction_edge_cases(manager)
-        
-        # Pruebas de conectividad
-        print("\n🌐 Pruebas de conectividad:")
+        manager = URLManager()
+        print("\n📐 Pruebas de construcción de URLs:")
+        url_tests = TestURLExamples()
+        url_tests.test_build_url_basic(manager)
+        url_tests.test_build_url_edge_cases(manager)
+        print("\n🌐 Pruebas de conectividad HTTP:")
         connectivity_tests = TestConnectivityExamples()
-        base_url = "httpbin.org"
-        
-        connectivity_tests.test_httpbin_get_success(manager, base_url)
-        connectivity_tests.test_httpbin_status_codes(manager, base_url)
-        connectivity_tests.test_httpbin_redirects(manager, base_url)
-        connectivity_tests.test_httpbin_delay(manager, base_url)
-        connectivity_tests.test_httpbin_ssl_verification(manager, base_url)
-        connectivity_tests.test_httpbin_different_ports(manager, base_url)
-        connectivity_tests.test_httpbin_invalid_paths(manager, base_url)
-        connectivity_tests.test_httpbin_invalid_domain(manager)
-        
-        print("\n🎉 Todas las pruebas completadas exitosamente!")
+        connectivity_tests.test_check_connectivity_response_codes(manager)
+        connectivity_tests.test_check_connectivity_exception_codes(manager)
+        print("\n✅ Todas las pruebas completadas exitosamente!")
         
     except Exception as e:
         print(f"\n❌ Error en pruebas: {e}")
