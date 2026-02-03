@@ -10,10 +10,11 @@ HTTP_STATUS_DICT = {
     302: ("Advertencia", "🔄 Redirección temporal"),
     307: ("Advertencia", "🔄 Redirección temporal"),
     308: ("Advertencia", "🔄 Redirección permanente"),
-    400: ("Advertencia", "❌ Solicitud incorrecta"),
-    401: ("Advertencia", "🔒 No autorizado"),
+    400: ("Error", "❌ Solicitud incorrecta"),
+    401: ("Error", "🔒 No autorizado"),
     403: ("Error", "🚫 Acceso denegado"),
-    404: ("Error", "❓ Página no encontrada")
+    404: ("Error", "❓ Página no encontrada"),
+    500: ("Error", "💥 Error interno del servidor")
 }
 
 # Socket Error Codes (para IPManager)
