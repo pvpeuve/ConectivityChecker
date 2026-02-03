@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import requests
 from base_manager import BaseManager
+from status_codes_dicts import HTTP_STATUS_DICT
 
 class URLManager(BaseManager):
     """
@@ -8,8 +9,8 @@ class URLManager(BaseManager):
 
     Methods:
         set_settings: Configura la estructura de la URL y los parámetros de conectividad
-        check_connectivity: Verifica la conectividad de una URL
         build_target: Construye la URL final
+        check_connectivity: Verifica la conectividad de una URL
 
     """
     def __init__(self):
@@ -98,18 +99,6 @@ class URLManager(BaseManager):
         # Si no se ha construido la dirección final, construirla
         if not self.final_target:
             self.final_target = self.build_target()
-        
-        status_dict = {
-            200: ("Éxito", f"✅ Conexión exitosa"),
-            301: ("Advertencia", f"🔄 Redirección permanente"),
-            302: ("Advertencia", f"🔄 Redirección temporal"),
-            307: ("Advertencia", f"🔄 Redirección temporal"),
-            308: ("Advertencia", f"🔄 Redirección permanente"),
-            400: ("Advertencia", f"❌ Solicitud incorrecta"),
-            401: ("Advertencia", f"🔒 No autorizado"),
-            403: ("Error", f"🚫 Acceso denegado"),
-            404: ("Error", f"❓ Página no encontrada")
-            }
 
         try:
             response = requests.get(
@@ -117,16 +106,14 @@ class URLManager(BaseManager):
                 timeout=self.timeout, 
                 allow_redirects=self.allow_redirects,
                 verify=self.verify_ssl
-            )
-
-            status_type, base_message = status_dict.get(response.status_code, ("Error", f"⚠️ Error HTTP"))
-            self.result = (status_type, f"{base_message}: {response.status_code}")
+            )           
                 
         except requests.exceptions.MissingSchema as e:
             if "No scheme supplied" in str(e):
                 self.result = ("Error", "❌ Error de URL: Falta http:// o https://")
             else:
                 self.result = ("Error", f"❌ Error de URL: {str(e)}")
+            return self.result
         except requests.exceptions.ConnectionError as e:
             if "Name or service not known" in str(e):
                 self.result = ("Error", "❌ Error de DNS: Dominio no encontrado")
@@ -134,11 +121,16 @@ class URLManager(BaseManager):
                 self.result = ("Error", "❌ Conexión rechazada: Servidor no disponible")
             else:
                 self.result = ("Error", f"❌ Error de conexión: {str(e)}")
+            return self.result
         except requests.exceptions.Timeout as e:
             self.result = ("Error", f"❌ Timeout: {str(e)}")
+            return self.result
         except requests.exceptions.RequestException as e:
             self.result = ("Error", f"❌ Error de solicitud: {str(e)}")
-
+            return self.result
+        
+        status_type, base_message = HTTP_STATUS_DICT.get(response.status_code, ("Error", f"⚠️ Error HTTP"))
+        self.result = (status_type, f"{base_message}: {response.status_code}")
         return self.result
 
 if __name__ == "__main__":
