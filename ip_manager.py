@@ -114,10 +114,13 @@ class IPManager(BaseManager):
             self.result = ("Error", f"❌ Error de conexión: {str(e)}")
             return self.result
         
-        status_type, message = SOCKET_STATUS_DICT.get(
+        status_type, message_template = SOCKET_STATUS_DICT.get(
             result, 
-            ("Error", f"❌ Error de conexión ({result}) a {ip}:{port}")
+            ("Error", f"❌ Error de conexión ({result}) a {{ip}}:{{port}}")
         )
+        
+        # Reemplazar placeholders en el mensaje
+        message = message_template.format(port=port, ip=ip)
         
         self.result = (status_type, message)
         return self.result
