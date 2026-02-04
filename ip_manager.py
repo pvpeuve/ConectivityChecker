@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 from base_manager import BaseManager
 from status_codes_dicts import SOCKET_STATUS_DICT
+
 class IPManager(BaseManager):
     """
     Clase para construir IPs y verificar conectividad
