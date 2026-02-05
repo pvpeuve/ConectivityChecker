@@ -20,15 +20,15 @@ class TestURLExamples:
     def test_build_url_basic(self, url_manager):
         """Prueba construcción básica de URLs"""
         test_cases = [
-            ("https://", "example.com", None, "", "https://example.com"),
-            ("http://", "example.com", 8080, "/api", "http://example.com:8080/api"),
-            ("https://", "api.example.com", None, "/v1/users", "https://api.example.com/v1/users"),
-            ("ftp://", "files.example.com", 21, "", "ftp://files.example.com:21"),
-            ("wss://", "ws.example.com", None, "/socket", "wss://ws.example.com/socket"),
+            ("https", "example.com", None, "", "https://example.com"),
+            ("http", "example.com", 8080, "/api", "http://example.com:8080/api"),
+            ("https", "api.example.com", None, "/v1/users", "https://api.example.com/v1/users"),
+            ("ftp", "files.example.com", 21, "", "ftp://files.example.com:21"),
+            ("wss", "ws.example.com", None, "/socket", "wss://ws.example.com/socket"),
         ]
         
-        for protocol, base_url, port, path, expected in test_cases:
-            url_manager.set_settings(protocol, port, path, None, base_url, None, None, None, None)
+        for protocol, url_address, port, path, expected in test_cases:
+            url_manager.set_target_params(url_address, protocol, port, path, None, None, None, None, None)
             constructed_url = url_manager.build_target()
             
             assert constructed_url == expected
@@ -37,27 +37,27 @@ class TestURLExamples:
     def test_build_url_edge_cases(self, url_manager):
         """Prueba casos extremos de construcción de URLs"""
         # Protocolo manual
-        url_manager.set_settings(None, None, None, None, "https://manual.com/path", None, None, None, None)
+        url_manager.set_target_params("https://manual.com/path", None, None, None, None, None, None, None, None)
         constructed_url = url_manager.build_target()
         assert constructed_url == "https://manual.com/path"
         
         # Puerto estándar (el método es genérico, incluye el puerto)
-        url_manager.set_settings("https://", 443, "/get", None, "example.com", None, None, None, None)
+        url_manager.set_target_params("example.com", "https", 443, "/get", None, None, None, None, None)
         constructed_url = url_manager.build_target()
         assert constructed_url == "https://example.com:443/get"
         
         # Puerto no estándar
-        url_manager.set_settings("https://", 8443, "/get", None, "example.com", None, None, None, None)
+        url_manager.set_target_params("example.com", "https", 8443, "/get", None, None, None, None, None)
         constructed_url = url_manager.build_target()
         assert constructed_url == "https://example.com:8443/get"
         
         # Puerto 80 con HTTP
-        url_manager.set_settings("http://", 80, "/", None, "localhost", None, None, None, None)
+        url_manager.set_target_params("localhost", "http", 80, "/", None, None, None, None, None)
         constructed_url = url_manager.build_target()
         assert constructed_url == "http://localhost:80/"
         
         # Protocolo no web (ejemplo FTP)
-        url_manager.set_settings("ftp://", 21, "/files", None, "ftp.server.com", None, None, None, None)
+        url_manager.set_target_params("ftp.server.com", "ftp", 21, "/files", None, None, None, None, None)
         constructed_url = url_manager.build_target()
         assert constructed_url == "ftp://ftp.server.com:21/files"
         
@@ -75,7 +75,7 @@ class TestConnectivityExamples:
         """Pruebas de códigos de estado HTTP"""
         with patch('requests.get') as mock_get:
             # Configurar URLManager
-            url_manager.set_settings("https://", None, "/test", None, "example.com", 5, 1, True, True)
+            url_manager.set_target_params("example.com", "https", None, "test", 5, 1, True, True)
             
             # Prueba de éxito
             mock_response = mock_get.return_value
@@ -112,7 +112,7 @@ class TestConnectivityExamples:
         """Pruebas de errores de conexión HTTP"""
         with patch('requests.get') as mock_get:
             # Configurar URLManager
-            url_manager.set_settings("https://", None, "/test", None, "example.com", 5, 1, True, True)
+            url_manager.set_target_params("example.com", "https", None, "test", 5, 1, True, True)
             
             # Prueba de excepción de Timeout
             mock_get.side_effect = requests.exceptions.Timeout("Request timeout")

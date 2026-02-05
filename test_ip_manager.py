@@ -27,7 +27,7 @@ class TestIPExamples:
         ]
         
         for ip_address, port, expected in test_cases:
-            ip_manager.set_settings(ip_address, port)
+            ip_manager.set_target_params(ip_address, port, "tcp", None, None, None, None)
             constructed_target = ip_manager.build_target()
             
             assert constructed_target == expected
@@ -36,27 +36,27 @@ class TestIPExamples:
     def test_build_ip_edge_cases(self, ip_manager):
         """Prueba casos extremos de construcción de targets IP"""
         # IP con puerto estándar HTTP
-        ip_manager.set_settings("192.168.1.100", 80)
+        ip_manager.set_target_params("192.168.1.100", 80, "tcp", None, None, None, None)
         constructed_target = ip_manager.build_target()
         assert constructed_target == "192.168.1.100:80"
         
         # IP con puerto estándar HTTPS
-        ip_manager.set_settings("10.0.0.1", 443)
+        ip_manager.set_target_params("10.0.0.1", 443, "tcp", None, None, None, None)
         constructed_target = ip_manager.build_target()
         assert constructed_target == "10.0.0.1:443"
         
         # IP con puerto no estándar
-        ip_manager.set_settings("172.16.0.50", 8080)
+        ip_manager.set_target_params("172.16.0.50", 8080, "tcp", None, None, None, None)
         constructed_target = ip_manager.build_target()
         assert constructed_target == "172.16.0.50:8080"
         
         # IP con puerto alto
-        ip_manager.set_settings("192.168.1.200", 65535)
+        ip_manager.set_target_params("192.168.1.200", 65535, "tcp", None, None, None, None)
         constructed_target = ip_manager.build_target()
         assert constructed_target == "192.168.1.200:65535"
         
         # localhost con diferentes puertos
-        ip_manager.set_settings("localhost", 3306)
+        ip_manager.set_target_params("localhost", 3306, "tcp", None, None, None, None)
         constructed_target = ip_manager.build_target()
         assert constructed_target == "localhost:3306"
         
@@ -74,8 +74,8 @@ class TestConnectivityExamples:
         """Pruebas de códigos de estado de socket TCP"""
         with patch('socket.socket') as mock_socket_class:
             # Configurar IPManager
-            ip_manager.set_settings("192.168.1.1", 80)
-            
+            ip_manager.set_target_params("192.168.1.1", 80, "tcp", None, None, None, None)
+            ip_manager.build_target()
             # Mock del socket
             mock_socket = mock_socket_class.return_value
             
@@ -127,7 +127,8 @@ class TestConnectivityExamples:
         """Pruebas de errores de conexión TCP"""
         with patch('socket.socket') as mock_socket_class:
             # Configurar IPManager
-            ip_manager.set_settings("192.168.1.1", 80)
+            ip_manager.set_target_params("192.168.1.1", 80, "tcp", None, None, None, None)
+            ip_manager.build_target()
             
             # Mock del socket
             mock_socket = mock_socket_class.return_value
@@ -136,7 +137,7 @@ class TestConnectivityExamples:
             mock_socket.connect_ex.side_effect = socket.error("Socket error")
             status_type, message = ip_manager.check_connectivity()
             assert status_type == "Error"
-            assert "conexión" in message
+            assert "socket" in message
 
             # Prueba de excepción de timeout
             mock_socket.connect_ex.side_effect = socket.timeout("Socket timeout")
