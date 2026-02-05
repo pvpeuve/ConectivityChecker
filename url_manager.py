@@ -21,16 +21,16 @@ class URLManager(BaseManager):
         self.path = None
         self.extension = None
 
-    def set_settings(self, protocol=None, port=None, path=None, extension=None, url_address=None, timeout=None, retries=None, allow_redirects=None, verify_ssl=None):
+    def set_target_params(self, url_address, protocol=None, port=None, path=None, extension=None, timeout=None, retries=None, allow_redirects=None, verify_ssl=None):
         """
         Configurar los componentes de la URL y los parámetros de conectividad
         
         Args:
+            url_address (str): URL base.
             protocol (str, optional): Protocolo. Defaults to None.
             port (int, optional): Puerto. Defaults to None.
             path (str, optional): Ruta. Defaults to None.
             extension (str, optional): Extensión. Defaults to None.
-            url_address (str, optional): URL base. Defaults to None.
             timeout (int, optional): Tiempo máximo de espera en segundos. Defaults to None
             retries (int, optional): Número de reintentos. Defaults to None
             allow_redirects (bool, optional): Permitir redirecciones. Defaults to None
@@ -55,33 +55,37 @@ class URLManager(BaseManager):
 
     def build_target(self):
         """
-        Construye URL completa con los componentes guardados en la clase
+        Construir URL completa con los componentes guardados en la clase
         
         Steps:
             1. Validar que la URL base exista
-            2. Crear lista de componentes en orden de construcción y procesarla
-            3. Unir componentes con '/' y retornar
+            2. Formatear los componentes que no sean None o "Manual"
+            3. Unir todos los componentes formateados
 
         Returns:
             str: URL completa construida
         """
-        if not self.url_address:
-            return None
+        if self.url_address is None:
+            raise ValueError("url_address cannot be None or empty")
         
-        components = [
-            self.protocol,
-            self.url_address,
-            self.extension,
-            f":{self.port}" if self.port is not None else None,
-            self.path if self.path else None
-        ]
-        url_components = []
-        for component in components:
-            if component is not None:
-                url_components.append(component)
+        if self.protocol is None or self.protocol == "Manual":
+            self.protocol = ""
+        else:
+            self.protocol = self.protocol + "://"
+
+        if self.extension is None or self.extension == "Manual":
+            self.extension = ""
+
+        if self.port is None or self.port == "Manual":
+            self.port = ""
+        else:
+            self.port = f":{self.port}"
         
-        self.final_target = "".join(url_components)
-        return self.final_target
+        if self.path is None:
+            self.path = ""
+
+        self.target = self.protocol + self.url_address + self.extension + self.port + self.path
+        return self.target
 
     def check_connectivity(self):
         """
@@ -96,13 +100,9 @@ class URLManager(BaseManager):
         Returns:
             tuple: (estado, mensaje)
         """
-        # Si no se ha construido la dirección final, construirla
-        if not self.final_target:
-            self.final_target = self.build_target()
-
         try:
             response = requests.get(
-                self.final_target, 
+                self.target, 
                 timeout=self.timeout, 
                 allow_redirects=self.allow_redirects,
                 verify=self.verify_ssl
@@ -112,7 +112,7 @@ class URLManager(BaseManager):
             if "No scheme supplied" in str(e):
                 self.result = ("Error", "❌ Error de URL: Falta http:// o https://")
             else:
-                self.result = ("Error", f"❌ Error de URL: {str(e)}")
+                self.result = ("Error", "❌ Error de URL: " + str(e))
             return self.result
         except requests.exceptions.ConnectionError as e:
             if "Name or service not known" in str(e):
@@ -120,13 +120,13 @@ class URLManager(BaseManager):
             elif "Connection refused" in str(e):
                 self.result = ("Error", "❌ Conexión rechazada: Servidor no disponible")
             else:
-                self.result = ("Error", f"❌ Error de conexión: {str(e)}")
+                self.result = ("Error", "❌ Error de conexión: " + str(e))
             return self.result
         except requests.exceptions.Timeout as e:
-            self.result = ("Error", f"❌ Timeout: {str(e)}")
+            self.result = ("Error", "❌ Timeout: " + str(e))
             return self.result
         except requests.exceptions.RequestException as e:
-            self.result = ("Error", f"❌ Error de solicitud: {str(e)}")
+            self.result = ("Error", "❌ Error de solicitud: " + str(e))
             return self.result
         
         status_type, base_message = HTTP_STATUS_DICT.get(response.status_code, ("Error", f"⚠️ Error HTTP"))
@@ -135,6 +135,8 @@ class URLManager(BaseManager):
 
 if __name__ == "__main__":
     url_manager = URLManager()
-    url_manager.set_settings("https://", None, "/get", None, "httpbin.org", 5, 1, True, True)
+    url_manager.set_target_params("https://", None, "/get", None, "httpbin.org", 5, 1, True, True)
+    url_manager.build_target()
+    print("Target:", url_manager.target)
     status_type, message = url_manager.check_connectivity()
     print(status_type, " - ", message)

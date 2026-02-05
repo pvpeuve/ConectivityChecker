@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 from base_manager import BaseManager
 from status_codes_dicts import SOCKET_STATUS_DICT
-
+import socket
 class IPManager(BaseManager):
     """
     Clase para construir IPs y verificar conectividad
@@ -15,9 +15,23 @@ class IPManager(BaseManager):
     """
     def __init__(self):
         super().__init__()
+        self.protocol = None
+        self.ip_address = None
+        self.port = None
 
-    def set_settings(self, ip_address, port=None, protocol="tcp", timeout=None, retries=None, allow_redirects=None, verify_ssl=None):
+    def set_target_params(self, ip_address, port=None, protocol="tcp", timeout=None, retries=None, allow_redirects=None, verify_ssl=None):
+        """
+        Configurar los componentes de la IP y los parámetros de conectividad
         
+        Args:
+            ip_address (str): Dirección IP.
+            port (int, optional): Puerto. Defaults to None.
+            protocol (str, optional): Protocolo. Defaults to "tcp".
+            timeout (int, optional): Tiempo máximo de espera en segundos. Defaults to None
+            retries (int, optional): Número de reintentos. Defaults to None
+            allow_redirects (bool, optional): Permitir redirecciones. Defaults to None
+            verify_ssl (bool, optional): Verificar certificados SSL. Defaults to None
+        """
         # Componentes de la IP
         self.ip_address = ip_address
         self.port = port
@@ -37,27 +51,23 @@ class IPManager(BaseManager):
         Construir IP completa con los componentes guardados en la clase
         
         Steps:
-            1. Validar que la IP base exista
-            2. Crear lista de componentes en orden de construcción y procesarla
-            3. Unir componentes con ':' y retornar
+            1. Validar que la URL base exista
+            2. Formatear los componentes que no sean None o "Manual"
+            3. Unir todos los componentes formateados
 
         Returns:
             str: IP completa construida
         """
-        if not self.ip_address:
-            return None
-        
-        components = [
-            self.ip_address,
-            f":{self.port}" if self.port is not None else None,
-        ]
-        ip_components = []
-        for component in components:
-            if component is not None:
-                ip_components.append(component)
-        
-        self.final_target = "".join(ip_components)
-        return self.final_target
+        if self.ip_address is None:
+            raise ValueError("ip_address cannot be None or empty")
+
+        if self.port is None or self.port == "Manual":
+            self.port = ""
+        else:
+            self.port = f":{self.port}"
+
+        self.target = self.ip_address + self.port
+        return self.target
 
     def check_connectivity(self):
         """
@@ -71,15 +81,13 @@ class IPManager(BaseManager):
             function: Método del protocolo especificado
         """
         # Si no se ha construido la dirección final, construirla
-        if not self.final_target:
-            target = self.build_target()
-        else:
-            target = self.final_target
+        if not self.target:
+            raise ValueError("Target not built")
 
         if self.protocol == "tcp":
-            return self.check_tcp_socket(target)
+            return self.check_tcp_socket()
 
-    def check_tcp_socket(self, target):
+    def check_tcp_socket(self):
         """
         Verificar puerto TCP con socket
 
@@ -92,36 +100,38 @@ class IPManager(BaseManager):
             6. Analizar el status code
             7. Guardar el resultado
         """
-        import socket
+        
         try:
-            ip, port = target.split(":")
-            port = int(port)
-
+            ip, port = self.target.split(":")
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            
             sock.settimeout(self.timeout or 3)
-
-            result = sock.connect_ex((ip, port))
-
+            socket_result = sock.connect_ex((ip, int(port)))
             sock.close()
-            
         except ValueError:
-            self.result = ("Error", "❌ Formato inválido. Usa IP:puerto")
+            self.result = ("Error", "❌ Formato inválido: Debe ser <IP> : <PUERTO>")
             return self.result
         except socket.timeout:
-            self.result = ("Error", f"❌ Timeout conectando a {target}")
+            self.result = ("Error", f"❌ Timeout conectando a {self.target}")
+            return self.result
+        except socket.error as e:
+            self.result = ("Error", f"❌ Error de socket: {str(e)}")
             return self.result
         except Exception as e:
             self.result = ("Error", f"❌ Error de conexión: {str(e)}")
             return self.result
-        
         status_type, message_template = SOCKET_STATUS_DICT.get(
-            result, 
-            ("Error", f"❌ Error de conexión ({result}) a {{ip}}:{{port}}")
+            socket_result, 
+            ("Error", f"❌ Error de conexión ({socket_result}) a {ip}:{port}")
         )
-        
         # Reemplazar placeholders en el mensaje
         message = message_template.format(port=port, ip=ip)
-        
         self.result = (status_type, message)
         return self.result
+
+if __name__ == "__main__":
+    ip_manager = IPManager()
+    ip_manager.set_target_params("127.0.0.1", 8080, "tcp", 5, 1, True, True)
+    ip_manager.build_target()
+    print("Target:", ip_manager.target)
+    status_type, message = ip_manager.check_connectivity()
+    print(status_type, " - ", message)
