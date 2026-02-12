@@ -3,7 +3,7 @@
 Página de verificación de URLs - Streamlit
 """
 import streamlit as st
-from url_manager import URLManager
+from managers.url_manager import URLManager
 
 def urls_page():
     st.header("🌐 Verificación de URLs")

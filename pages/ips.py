@@ -3,7 +3,7 @@
 Página de verificación de IPs - Streamlit
 """
 import streamlit as st
-from ip_manager import IPManager
+from managers.ip_manager import IPManager
 
 def ips_page():
     st.header("🌍 Verificación de IPs")
