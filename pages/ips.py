@@ -4,12 +4,19 @@ Página de verificación de IPs - Streamlit
 """
 import streamlit as st
 from managers.ip_manager import IPManager
+from managers.analytics_manager import AnalyticsManager
 
 def ips_page():
     st.header("🌍 Verificación de IPs")
     st.markdown("Verifica la conectividad de direcciones IP y puertos TCP")
+    
+    # Inicializar analytics manager en session state
+    if 'analytics_manager' not in st.session_state:
+        st.session_state.analytics_manager = AnalyticsManager()
+    
     # Crear instancia del manager
     ip_manager = IPManager()
+    ip_manager.set_analytics_callback(st.session_state.analytics_manager)
     # GUI (form) para ingresar IP
     with st.form("ip_verification_form"):
         ip_address = st.text_input(label="Dirección IP", placeholder="192.168.1.1, localhost, etc.", key="ip_input")
@@ -26,7 +33,7 @@ def ips_page():
     # 1. CONFIGURACIÓN - Widgets y opciones
     # ==============================================================================
 
-    # Tabs para organizar la configuración
+    # GUI (Tabs) para organizar la configuración
     tab1, tab2 = st.tabs(["⚙️ Configuración", "📊 Detalles"])
     with tab1:
         col1, col2 = st.columns(2)
@@ -84,7 +91,7 @@ def ips_page():
     # Variables para resultados (inicializadas para evitar errores)
     status_type = None
     message = None
-    full_target = None
+
     # Procesamiento del formulario
     if submitted:
         if not ip_address:

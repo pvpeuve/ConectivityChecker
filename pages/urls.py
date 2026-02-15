@@ -4,12 +4,19 @@ Página de verificación de URLs - Streamlit
 """
 import streamlit as st
 from managers.url_manager import URLManager
+from managers.analytics_manager import AnalyticsManager
 
 def urls_page():
     st.header("🌐 Verificación de URLs")
     st.markdown("Verifica la conectividad de sitios web y APIs HTTP/HTTPS")
+    
+    # Inicializar analytics manager en session state
+    if 'analytics_manager' not in st.session_state:
+        st.session_state.analytics_manager = AnalyticsManager()
+    
     # Crear instancia del manager
     url_manager = URLManager()
+    url_manager.set_analytics_callback(st.session_state.analytics_manager)
     # GUI (form) para ingresar URL
     with st.form("url_verification_form"):
         url_address = st.text_input(label="Dirección Web", placeholder="https://google.com, https://github.com, etc.", key="url_input")
@@ -70,7 +77,7 @@ def urls_page():
                 allow_redirects = st.checkbox("Seguir redirecciones", value=True)
                 verify_ssl = st.checkbox("Verificar SSL", value=True)
         # Configurar parámetros del target
-        url_manager.set_target_params(protocol, port, path, extension, url_address, timeout, retries, allow_redirects, verify_ssl)
+        url_manager.set_target_params(url_address, protocol, port, path, extension, timeout, retries, allow_redirects, verify_ssl)
         # Construir target usando el manager
         preview_target = url_manager.build_target()
         # Mostrar previsualización
@@ -99,6 +106,10 @@ def urls_page():
     # 2. PROCESO - Formulario principal y lógica
     # ==============================================================================
 
+    # Variables para resultados (inicializadas para evitar errores)
+    status_type = None
+    message = None
+
     # Procesamiento del formulario
     if submitted:
         if not url_address:
@@ -107,7 +118,7 @@ def urls_page():
             message = None
         else:
             # Configurar parámetros del target
-            url_manager.set_target_params(protocol, port, path, extension, url_address, timeout, retries, allow_redirects, verify_ssl)
+            url_manager.set_target_params(url_address, protocol, port, path, extension, timeout, retries, allow_redirects, verify_ssl)
             # Construir target usando el manager
             url_manager.build_target()
             # Mostrar URL que se va a verificar y enlace para abrir
