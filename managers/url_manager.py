@@ -36,12 +36,12 @@ class URLManager(BaseManager):
             allow_redirects (bool, optional): Permitir redirecciones. Defaults to None
             verify_ssl (bool, optional): Verificar certificados SSL. Defaults to None
         """
-        # Componentes de la URL
-        self.protocol = protocol
+        # Asignar componentes (dejar None si es Manual)
         self.url_address = url_address
-        self.port = port
-        self.path = path
-        self.extension = extension
+        self.protocol = protocol if protocol != "Manual" else None
+        self.extension = extension if extension != "Manual" else None
+        self.port = port if port != "Manual" else None
+        self.path = path if path != "Manual" else None
 
         # Parámetros de conectividad
         self.timeout = timeout
@@ -51,7 +51,6 @@ class URLManager(BaseManager):
 
         # Clase base
         self.target = url_address
-        return
 
     def build_target(self):
         """
@@ -59,8 +58,7 @@ class URLManager(BaseManager):
         
         Steps:
             1. Validar que la URL base exista
-            2. Formatear los componentes que no sean None o "Manual"
-            3. Unir todos los componentes formateados
+            2. Construir lista de componentes y unir
 
         Returns:
             str: URL completa construida
@@ -68,23 +66,17 @@ class URLManager(BaseManager):
         if self.url_address is None:
             raise ValueError("url_address cannot be None or empty")
         
-        if self.protocol is None or self.protocol == "Manual":
-            self.protocol = ""
-        else:
-            self.protocol = self.protocol + "://"
-
-        if self.extension is None or self.extension == "Manual":
-            self.extension = ""
-
-        if self.port is None or self.port == "Manual":
-            self.port = ""
-        else:
-            self.port = f":{self.port}"
+        # Construir lista de componentes (solo los que no son None)
+        components = [
+            self.protocol + "://" if self.protocol else "",
+            self.url_address,
+            self.extension if self.extension else "",
+            f":{self.port}" if self.port else "",
+            self.path if self.path else ""
+        ]
         
-        if self.path is None:
-            self.path = ""
-
-        self.target = self.protocol + self.url_address + self.extension + self.port + self.path
+        # Unir todos los componentes
+        self.target = "".join(components)
         return self.target
 
     def check_connectivity(self):
@@ -100,6 +92,9 @@ class URLManager(BaseManager):
         Returns:
             tuple: (estado, mensaje)
         """
+        import time
+        start_time = time.time()
+        
         try:
             response = requests.get(
                 self.target, 
@@ -113,6 +108,7 @@ class URLManager(BaseManager):
                 self.result = ("Error", "❌ Error de URL: Falta http:// o https://")
             else:
                 self.result = ("Error", "❌ Error de URL: " + str(e))
+            self._send_to_analytics(time.time() - start_time)
             return self.result
         except requests.exceptions.ConnectionError as e:
             if "Name or service not known" in str(e):
@@ -121,17 +117,59 @@ class URLManager(BaseManager):
                 self.result = ("Error", "❌ Conexión rechazada: Servidor no disponible")
             else:
                 self.result = ("Error", "❌ Error de conexión: " + str(e))
+            self._send_to_analytics(time.time() - start_time)
             return self.result
         except requests.exceptions.Timeout as e:
             self.result = ("Error", "❌ Timeout: " + str(e))
+            self._send_to_analytics(time.time() - start_time)
             return self.result
         except requests.exceptions.RequestException as e:
             self.result = ("Error", "❌ Error de solicitud: " + str(e))
+            self._send_to_analytics(time.time() - start_time)
             return self.result
         
         status_type, base_message = HTTP_STATUS_DICT.get(response.status_code, ("Error", f"⚠️ Error HTTP"))
         self.result = (status_type, f"{base_message}: {response.status_code}")
+        
+        # Enviar a analytics
+        self._send_to_analytics(time.time() - start_time)
+        
         return self.result
+
+    def set_analytics_callback(self, manager):
+        """Configurar callback para analytics"""
+        self.analytics_callback = manager
+    
+    def _extract_error_type(self, message):
+        """Extraer tipo de error del mensaje"""
+        if "Timeout" in message:
+            return "timeout"
+        elif "DNS" in message or "Dominio no encontrado" in message:
+            return "dns_error"
+        elif "Conexión rechazada" in message:
+            return "connection_refused"
+        elif "URL" in message:
+            return "url_error"
+        elif "SSL" in message or "certificado" in message.lower():
+            return "ssl_error"
+        else:
+            return "unknown"
+    
+    def _send_to_analytics(self, response_time):
+        """Enviar datos a analytics si hay callback configurado"""
+        if hasattr(self, 'analytics_callback') and self.analytics_callback:
+            import time
+            analytics_data = {
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "type": "url",
+                "target": self.target,
+                "status": self.result[0],
+                "response_time": response_time,
+                "protocol": self.protocol,  
+                "port": self.port,        
+                "error_type": self._extract_error_type(self.result[1]) if self.result[0] == "Error" else None
+            }
+            self.analytics_callback.add_data(analytics_data)
 
 if __name__ == "__main__":
     url_manager = URLManager()

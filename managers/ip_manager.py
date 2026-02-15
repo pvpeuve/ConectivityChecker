@@ -32,10 +32,10 @@ class IPManager(BaseManager):
             allow_redirects (bool, optional): Permitir redirecciones. Defaults to None
             verify_ssl (bool, optional): Verificar certificados SSL. Defaults to None
         """
-        # Componentes de la IP
+        # Asignar componentes (dejar None si es Manual)
         self.ip_address = ip_address
-        self.port = port
-        self.protocol = protocol
+        self.port = port if port != "Manual" else None
+        self.protocol = protocol if protocol != "Manual" else "tcp"
 
         # Parámetros de conectividad
         self.timeout = timeout
@@ -51,22 +51,23 @@ class IPManager(BaseManager):
         Construir IP completa con los componentes guardados en la clase
         
         Steps:
-            1. Validar que la URL base exista
-            2. Formatear los componentes que no sean None o "Manual"
-            3. Unir todos los componentes formateados
+            1. Validar que la IP base exista
+            2. Construir lista de componentes y unir
 
         Returns:
             str: IP completa construida
         """
         if self.ip_address is None:
             raise ValueError("ip_address cannot be None or empty")
-
-        if self.port is None or self.port == "Manual":
-            self.port = ""
-        else:
-            self.port = f":{self.port}"
-
-        self.target = self.ip_address + self.port
+        
+        # Construir lista de componentes (solo los que no son None)
+        components = [
+            self.ip_address,
+            f":{self.port}" if self.port else ""
+        ]
+        
+        # Unir todos los componentes
+        self.target = "".join(components)
         return self.target
 
     def check_connectivity(self):
@@ -100,6 +101,8 @@ class IPManager(BaseManager):
             6. Analizar el status code
             7. Guardar el resultado
         """
+        import time
+        start_time = time.time()
         
         try:
             ip, port = self.target.split(":")
@@ -109,15 +112,19 @@ class IPManager(BaseManager):
             sock.close()
         except ValueError:
             self.result = ("Error", "❌ Formato inválido: Debe ser <IP> : <PUERTO>")
+            self._send_to_analytics(time.time() - start_time)
             return self.result
         except socket.timeout:
             self.result = ("Error", f"❌ Timeout conectando a {self.target}")
+            self._send_to_analytics(time.time() - start_time)
             return self.result
         except socket.error as e:
             self.result = ("Error", f"❌ Error de socket: {str(e)}")
+            self._send_to_analytics(time.time() - start_time)
             return self.result
         except Exception as e:
             self.result = ("Error", f"❌ Error de conexión: {str(e)}")
+            self._send_to_analytics(time.time() - start_time)
             return self.result
         status_type, message_template = SOCKET_STATUS_DICT.get(
             socket_result, 
@@ -126,7 +133,44 @@ class IPManager(BaseManager):
         # Reemplazar placeholders en el mensaje
         message = message_template.format(port=port, ip=ip)
         self.result = (status_type, message)
+        
+        # Enviar a analytics
+        self._send_to_analytics(time.time() - start_time)
+        
         return self.result
+
+    def set_analytics_callback(self, manager):
+        """Configurar callback para analytics"""
+        self.analytics_callback = manager
+    
+    def _extract_error_type(self, message):
+        """Extraer tipo de error del mensaje"""
+        if "Timeout" in message:
+            return "timeout"
+        elif "conexión" in message or "connection" in message.lower():
+            return "connection_refused"
+        elif "Formato inválido" in message:
+            return "invalid_format"
+        elif "socket" in message.lower():
+            return "socket_error"
+        else:
+            return "unknown"
+    
+    def _send_to_analytics(self, response_time):
+        """Enviar datos a analytics si hay callback configurado"""
+        if hasattr(self, 'analytics_callback') and self.analytics_callback:
+            import time
+            analytics_data = {
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "type": "ip",
+                "target": self.target,
+                "status": self.result[0],
+                "response_time": response_time,
+                "protocol": self.protocol,
+                "port": self.port,
+                "error_type": self._extract_error_type(self.result[1]) if self.result[0] == "Error" else None
+            }
+            self.analytics_callback.add_data(analytics_data)
 
 if __name__ == "__main__":
     ip_manager = IPManager()
