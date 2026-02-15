@@ -24,3 +24,7 @@ class BaseManager:
     def check_connectivity(self):
         """Verificar conectividad"""
         raise NotImplementedError("Subclass must implement check_connectivity")
+    
+    def _send_to_analytics(self, response_time):
+        """Enviar datos a analytics si hay callback configurado"""
+        raise NotImplementedError("Subclass must implement _send_to_analytics")
