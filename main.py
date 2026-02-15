@@ -18,6 +18,9 @@ pg = st.navigation({
     "Herramientas": [
         st.Page(urls.urls_page, title="🌐 Verificar URL"),
         st.Page(ips.ips_page, title="🌍 Verificar IP")
+    ],
+    "Análisis": [
+        st.Page("pages/analytics.py", title="📊 Análisis")
     ]
 })  
 
