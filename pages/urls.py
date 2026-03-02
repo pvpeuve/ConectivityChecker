@@ -92,18 +92,62 @@ def urls_page():
             open_button_placeholder = st.empty()
 
     with tab3:
-        st.markdown("""
-        - **Protocolos HTTP/HTTPS**: Verifica conectividad web mediante requests
-        - **Timeout**: Tiempo máximo de espera para la respuesta HTTP
-        - **Reintentos**: Número de intentos en caso de fallo
-        - **Redirecciones**: Sigue automáticamente redireccionamientos 301/302
-        - **SSL**: Verifica certificados HTTPS para conexiones seguras
-        - **Protocolos comunes**:
-          - **https://**: Conexión segura (puerto 443)
-          - **http://**: Conexión estándar (puerto 80)
-          - **ftp://**: Transferencia de archivos (puerto 21)
-          - **ws://** / **wss://**: WebSockets (puertos 80/443)
-        """)
+        with st.expander("💡 Casos de Uso Comunes"):
+            st.markdown("""
+            **🌍 Sitios Web Populares:**
+            - `https://google.com` - Motor de búsqueda
+            - `https://github.com` - Repositorios de código
+            - `https://stackoverflow.com` - Q&A programación
+            - `https://api.github.com/users` - API pública
+            
+            **🔍 APIs y Servicios:**
+            - `https://httpbin.org/status/200` - Test HTTP
+            - `https://jsonplaceholder.typicode.com/posts` - API fake
+            - `https://api.ipify.org` - Obtener IP pública
+            - `https://reqres.in/api/users` - API REST test
+            """)
+        with st.expander("🧩 Componentes"):
+            st.markdown("""
+            **📍 Dirección Base:** URL principal sin protocolo
+            - Ejemplo: `google.com` (no `https://`)
+            
+            **🔗 Protocolo:** Método de conexión
+            - `https://` - Conexión segura (SSL/TLS)
+            - `http://` - Conexión estándar (sin encriptar)
+            - `ftp://` - Transferencia de archivos
+            
+            **🏷️ Extensión:** Dominio de nivel superior
+            - `.com` - Comercial
+            - `.io` - Tecnología
+            - `.org` - Organización
+            
+            **🚪 Puerto:** Puerto específico
+            - `80` - HTTP estándar
+            - `443` - HTTPS estándar
+            - `8080` - Desarrollo
+            
+            **🛤️ Path:** Ruta específica
+            - `/api/v1/users` - Endpoint REST
+            - `/admin` - Panel administración
+            """)
+        with st.expander("📋 Estados de Verificación"):
+            st.markdown("""
+            **✅ Éxito:** Conexión establecida correctamente
+            - Código HTTP 2xx (200, 201, etc.)
+            
+            **⚠️ Advertencia:** Conexión con problemas menores
+            - Redirecciones, certificados SSL débiles
+            
+            **❌ Error:** No se pudo establecer conexión
+            - DNS no encontrado, timeout, SSL inválido
+            
+            **⏱️ Tiempos de Respuesta:**
+            - **< 100ms:** Excelente
+            - **100-500ms:** Bueno
+            - **> 500ms:** Lento
+            - **> 2000ms:** Muy lento
+            """)
+
     # ==============================================================================
     # 2. PROCESO - Formulario principal y lógica
     # ==============================================================================

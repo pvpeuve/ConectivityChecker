@@ -76,18 +76,53 @@ def ips_page():
         with col3:
             open_button_placeholder = st.empty()
     with tab3:
-        st.markdown("""
-        - **Protocolo TCP**: Verifica conectividad directa mediante sockets
-        - **Timeout**: Tiempo máximo de espera para la respuesta
-        - **Reintentos**: Número de intentos en caso de fallo
-        - **Puertos comunes**:
-            - 22: SSH
-            - 80: HTTP
-            - 443: HTTPS
-            - 53: DNS
-            - 3306: MySQL
-            - 5432: PostgreSQL
-        """)
+        with st.expander("💡 Casos de Uso Comunes"):
+            st.markdown("""
+            **🌐 Servicios de Red:**
+            - `8.8.8.8:53` - DNS Google
+            - `1.1.1.1:53` - DNS Cloudflare
+            - `192.168.1.1:80` - Router local
+            - `localhost:3000` - Desarrollo local
+            
+            **🔍 Herramientas Online:**
+            - `208.67.222.222:53` - DNS OpenDNS
+            - `9.9.9.9:53` - DNS Quad9
+            - `1.0.0.1:53` - DNS Cloudflare secundario
+            """)
+        with st.expander("🧩 Componentes"):
+            st.markdown("""
+            **🌐 Dirección IP:** Identificador único en red
+            - `192.168.1.1` - Red local privada
+            - `8.8.8.8` - DNS público Google
+            - `127.0.0.1` - Localhost
+            
+            **🔌 Protocolo:** Método de comunicación
+            - `TCP` - Conexión fiable y ordenada
+            - `UDP` - Conexión rápida sin confirmación
+            
+            **🚪 Puerto:** Servicio específico
+            - `22` - SSH (acceso remoto)
+            - `53` - DNS (resolución nombres)
+            - `80` - HTTP (sitios web)
+            - `443` - HTTPS (sitios seguros)
+            """)
+        with st.expander("📋 Estados de Verificación"):
+            st.markdown("""
+            **✅ Éxito:** Conexión establecida correctamente
+            - Puerto abierto y respondiendo
+            
+            **⚠️ Advertencia:** Conexión con problemas menores
+            - Conexión lenta, timeouts parciales
+            
+            **❌ Error:** No se pudo establecer conexión
+            - Puerto cerrado, firewall, host inalcanzable
+            
+            **⏱️ Tiempos de Respuesta:**
+            - **< 100ms:** Excelente
+            - **100-500ms:** Bueno
+            - **> 500ms:** Lento
+            - **> 2000ms:** Muy lento
+            """)
 
     # ==============================================================================
     # 2. PROCESO - Formulario principal y lógica
