@@ -83,13 +83,6 @@ def urls_page():
                 st.code(preview_target)
     with tab2:
         result_details_placeholder = st.empty()
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            copy_button_placeholder = st.empty()
-        with col2:
-            retry_button_placeholder = st.empty()
-        with col3:
-            open_button_placeholder = st.empty()
 
     with tab3:
         with st.expander("💡 Casos de Uso Comunes"):
@@ -180,9 +173,6 @@ def urls_page():
     if submitted and status_type and message:
         if status_type == "Éxito":
             target_result.success(message)
-            copy_button_placeholder.button("📋 Copiar", key="copy", help="Copiar al portapapeles")
-            retry_button_placeholder.button("🔄 Reintentar", key="retry", help="Volver a verificar")
-            open_button_placeholder.button("🔗 Abrir", key="open", help="Abrir en nueva pestaña")
         elif status_type == "Advertencia":
             target_result.warning(message)
         else:
