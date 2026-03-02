@@ -68,6 +68,13 @@ def ips_page():
                 st.code(preview_target)
     with tab2:
         result_details_placeholder = st.empty()
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            copy_button_placeholder = st.empty()
+        with col2:
+            retry_button_placeholder = st.empty()
+        with col3:
+            open_button_placeholder = st.empty()
     with tab3:
         st.markdown("""
         - **Protocolo TCP**: Verifica conectividad directa mediante sockets
@@ -114,13 +121,13 @@ def ips_page():
     if submitted and ip_address and port and status_type and message:
         if status_type == "Éxito":
             target_result.success(message)
-            link_button.markdown(f"[Abrir]({ip_manager.target})")
+            copy_button_placeholder.button("📋 Copiar IP", key="ip_copy", help="Copiar IP:puerto al portapapeles")
+            retry_button_placeholder.button("🔄 Reintentar", key="ip_retry", help="Volver a verificar IP")
+            open_button_placeholder.button("🔗 Test Puerto", key="ip_open", help="Test de puerto online")
         elif status_type == "Advertencia":
             target_result.warning(message)
-            link_button.empty()
         else:
             target_result.error(message)
-            link_button.empty()
         # Actualizar el placeholder con los detalles
         result_details_placeholder.code(f"""Dirección verificada: {ip_manager.target}
             Protocolo: {protocol.upper()}

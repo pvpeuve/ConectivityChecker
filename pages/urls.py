@@ -20,11 +20,7 @@ def urls_page():
     # GUI (form) para ingresar URL
     with st.form("url_verification_form"):
         url_address = st.text_input(label="Dirección Web", placeholder="https://google.com, https://github.com, etc.", key="url_input")
-        form_col1, form_col2 = st.columns([4,1])
-        with form_col1:
-            submitted = st.form_submit_button("Verificar Web")
-        with form_col2:
-            link_button = st.empty()
+        submitted = st.form_submit_button("Verificar Web")
     # GUI (warning/info/error/success) para mostrar resultados de la verificación
     target_result = st.empty()
 
@@ -87,6 +83,14 @@ def urls_page():
                 st.code(preview_target)
     with tab2:
         result_details_placeholder = st.empty()
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            copy_button_placeholder = st.empty()
+        with col2:
+            retry_button_placeholder = st.empty()
+        with col3:
+            open_button_placeholder = st.empty()
+
     with tab3:
         st.markdown("""
         - **Protocolos HTTP/HTTPS**: Verifica conectividad web mediante requests
@@ -132,13 +136,13 @@ def urls_page():
     if submitted and status_type and message:
         if status_type == "Éxito":
             target_result.success(message)
-            link_button.markdown(f"[Abrir]({url_manager.target})")
+            copy_button_placeholder.button("📋 Copiar", key="copy", help="Copiar al portapapeles")
+            retry_button_placeholder.button("🔄 Reintentar", key="retry", help="Volver a verificar")
+            open_button_placeholder.button("🔗 Abrir", key="open", help="Abrir en nueva pestaña")
         elif status_type == "Advertencia":
             target_result.warning(message)
-            link_button.empty()
         else:
             target_result.error(message)
-            link_button.empty()
         # Actualizar el placeholder con los detalles
         result_details_placeholder.code(f"""Dirección verificada: {url_manager.target}
             Timeout: {timeout}s
