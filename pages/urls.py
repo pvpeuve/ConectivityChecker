@@ -33,7 +33,7 @@ def urls_page():
     # ==============================================================================
 
     # Tabs para organizar la configuración
-    tab1, tab2 = st.tabs(["⚙️ Configuración", "📊 Detalles"])
+    tab1, tab2, tab3 = st.tabs(["⚙️ Configuración", "📊 Resultados", "❔ Ayuda"])
     with tab1:
         col1, col2 = st.columns(2)
         with col1:
@@ -86,10 +86,8 @@ def urls_page():
                 st.text("Previsualización de la URL:")
                 st.code(preview_target)
     with tab2:
-        st.markdown("## 📊 Información de la Verificación") 
-        # Placeholder para detalles (siempre existe)
-        details_placeholder = st.empty()
-        st.markdown("### ℹ️ Acerca de las Verificaciones URL")
+        result_details_placeholder = st.empty()
+    with tab3:
         st.markdown("""
         - **Protocolos HTTP/HTTPS**: Verifica conectividad web mediante requests
         - **Timeout**: Tiempo máximo de espera para la respuesta HTTP
@@ -141,3 +139,11 @@ def urls_page():
         else:
             target_result.error(message)
             link_button.empty()
+        # Actualizar el placeholder con los detalles
+        result_details_placeholder.code(f"""Dirección verificada: {url_manager.target}
+            Timeout: {timeout}s
+            Reintentos: {retries}
+            Status: {status_type}""")
+    else:
+        # Mostrar mensaje informativo en el placeholder
+        result_details_placeholder.info("🔍 Realiza una verificación para ver los detalles aquí")

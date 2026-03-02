@@ -34,7 +34,7 @@ def ips_page():
     # ==============================================================================
 
     # GUI (Tabs) para organizar la configuración
-    tab1, tab2 = st.tabs(["⚙️ Configuración", "📊 Detalles"])
+    tab1, tab2, tab3 = st.tabs(["⚙️ Configuración", "📊 Resultados", "❔ Ayuda"])
     with tab1:
         col1, col2 = st.columns(2)
         with col1:
@@ -67,10 +67,8 @@ def ips_page():
                 st.text("Previsualización de la IP:")
                 st.code(preview_target)
     with tab2:
-        st.markdown("## 📊 Información de la Verificación")
-        # Placeholder para detalles (siempre existe)
-        details_placeholder = st.empty()
-        st.markdown("### ℹ️ Acerca de las Verificaciones IP")
+        result_details_placeholder = st.empty()
+    with tab3:
         st.markdown("""
         - **Protocolo TCP**: Verifica conectividad directa mediante sockets
         - **Timeout**: Tiempo máximo de espera para la respuesta
@@ -124,11 +122,11 @@ def ips_page():
             target_result.error(message)
             link_button.empty()
         # Actualizar el placeholder con los detalles
-        details_placeholder.code(f"""Dirección verificada: {ip_manager.target}
-Protocolo: {protocol.upper()}
-Timeout: {timeout}s
-Reintentos: {retries}
-Status: {status_type}""")
+        result_details_placeholder.code(f"""Dirección verificada: {ip_manager.target}
+            Protocolo: {protocol.upper()}
+            Timeout: {timeout}s
+            Reintentos: {retries}
+            Status: {status_type}""")
     else:
         # Mostrar mensaje informativo en el placeholder
-        details_placeholder.info("🔍 Realiza una verificación para ver los detalles aquí")
+        result_details_placeholder.info("🔍 Realiza una verificación para ver los detalles aquí")
