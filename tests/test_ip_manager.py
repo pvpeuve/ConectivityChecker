@@ -138,18 +138,33 @@ class TestConnectivityExamples:
             status_type, message = ip_manager.check_connectivity()
             assert status_type == "Error"
             assert "socket" in message
+            
+            # Verificar que se llamó a _handle_exception y se asignaron atributos
+            assert hasattr(ip_manager, 'request_data')
+            assert hasattr(ip_manager, 'response_data')
+            assert hasattr(ip_manager, 'request_metadata')
 
             # Prueba de excepción de timeout
             mock_socket.connect_ex.side_effect = socket.timeout("Socket timeout")
             status_type, message = ip_manager.check_connectivity()
             assert status_type == "Error"
             assert "Timeout" in message
+            
+            # Verificar que se llamó a _handle_exception y se asignaron atributos
+            assert hasattr(ip_manager, 'request_data')
+            assert hasattr(ip_manager, 'response_data')
+            assert hasattr(ip_manager, 'request_metadata')
 
             # Prueba de excepción genérica
             mock_socket.connect_ex.side_effect = Exception("Generic error")
             status_type, message = ip_manager.check_connectivity()
             assert status_type == "Error"
             assert "conexión" in message
+            
+            # Verificar que se llamó a _handle_exception y se asignaron atributos
+            assert hasattr(ip_manager, 'request_data')
+            assert hasattr(ip_manager, 'response_data')
+            assert hasattr(ip_manager, 'request_metadata')
 
         print("✅ Todos los códigos de excepción de socket funcionan correctamente")
 

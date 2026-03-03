@@ -119,24 +119,44 @@ class TestConnectivityExamples:
             status_type, message = url_manager.check_connectivity()
             assert status_type == "Error"
             assert "Timeout" in message
+            
+            # Verificar que se llamó a _handle_exception y se asignaron atributos
+            assert hasattr(url_manager, 'request_data')
+            assert hasattr(url_manager, 'response_data')
+            assert hasattr(url_manager, 'request_metadata')
 
             # Prueba de excepción de DNS
             mock_get.side_effect = requests.exceptions.ConnectionError("DNS resolution failed")
             status_type, message = url_manager.check_connectivity()
             assert status_type == "Error"
             assert "DNS" in message or "no encontrado" in message
+            
+            # Verificar que se llamó a _handle_exception y se asignaron atributos
+            assert hasattr(url_manager, 'request_data')
+            assert hasattr(url_manager, 'response_data')
+            assert hasattr(url_manager, 'request_metadata')
 
             # Prueba de excepción de SSL
             mock_get.side_effect = requests.exceptions.SSLError("SSL error")
             status_type, message = url_manager.check_connectivity()
             assert status_type == "Error"
             assert "SSL" in message
+            
+            # Verificar que se llamó a _handle_exception y se asignaron atributos
+            assert hasattr(url_manager, 'request_data')
+            assert hasattr(url_manager, 'response_data')
+            assert hasattr(url_manager, 'request_metadata')
 
             # Prueba de conexión rechazada
             mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
             status_type, message = url_manager.check_connectivity()
             assert status_type == "Error"
             assert "rechazada" in message or "refused" in message
+            
+            # Verificar que se llamó a _handle_exception y se asignaron atributos
+            assert hasattr(url_manager, 'request_data')
+            assert hasattr(url_manager, 'response_data')
+            assert hasattr(url_manager, 'request_metadata')
 
             # Prueba de demasiados redirects
             mock_get.side_effect = requests.exceptions.TooManyRedirects("Too many redirects")
