@@ -153,12 +153,35 @@ def ips_page():
             target_result.warning(message)
         else:
             target_result.error(message)
-        # Actualizar el placeholder con los detalles
-        result_details_placeholder.code(f"""Dirección verificada: {ip_manager.target}
-            Protocolo: {protocol.upper()}
-            Timeout: {timeout}s
-            Reintentos: {retries}
-            Status: {status_type}""")
+        
+        # Mostrar datos enriquecidos si existen
+        if hasattr(ip_manager, 'response_data'):
+            response_data = ip_manager.response_data
+            request_data = ip_manager.request_data
+            request_metadata = ip_manager.request_metadata
+            
+            result_details_placeholder.code(f"""
+🔧 DATOS DE ENTRADA
+• Target: {request_data.get('target', 'N/A')}
+• Protocolo: {request_data.get('protocol', 'N/A')}
+• Puerto: {request_data.get('port', 'N/A')}
+• Timeout: {request_data.get('timeout', 'N/A')}s
+• Reintentos: {request_data.get('retries', 'N/A')}
+
+📋 DATOS DE RESPUESTA
+• Código Socket: {response_data.get('socket_code', 'N/A')}
+• Tiempo de Respuesta: {response_data.get('response_time', 0):.3f}s
+• Host Info: {response_data.get('host_info', 'N/A')}
+• Tipo Conexión: {response_data.get('connection_type', 'N/A')}
+
+📅 METADATOS
+• Timestamp: {request_metadata.get('timestamp', 'N/A')}
+• Type: {request_metadata.get('type', 'N/A')}
+• Status: {request_metadata.get('status', 'N/A')}
+• Error Type: {request_metadata.get('error_type', 'N/A')}""")
+        else:
+            # Mostrar mensaje informativo si no hay datos enriquecidos
+            result_details_placeholder.info("🔍 Realiza una verificación para ver los datos enriquecidos")
     else:
         # Mostrar mensaje informativo en el placeholder
         result_details_placeholder.info("🔍 Realiza una verificación para ver los detalles aquí")
