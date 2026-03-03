@@ -109,7 +109,7 @@ class URLManager(BaseManager):
                 self.result = ("Error", "❌ Error de URL: Falta http:// o https://")
             else:
                 self.result = ("Error", "❌ Error de URL: " + str(e))
-            self._send_to_analytics(time.time() - start_time)
+            self._handle_exception(start_time)
             return self.result
         except requests.exceptions.ConnectionError as e:
             if "Name or service not known" in str(e):
@@ -118,15 +118,15 @@ class URLManager(BaseManager):
                 self.result = ("Error", "❌ Conexión rechazada: Servidor no disponible")
             else:
                 self.result = ("Error", "❌ Error de conexión: " + str(e))
-            self._send_to_analytics(time.time() - start_time)
+            self._handle_exception(start_time)
             return self.result
         except requests.exceptions.Timeout as e:
             self.result = ("Error", "❌ Timeout: " + str(e))
-            self._send_to_analytics(time.time() - start_time)
+            self._handle_exception(start_time)
             return self.result
         except requests.exceptions.RequestException as e:
             self.result = ("Error", "❌ Error de solicitud: " + str(e))
-            self._send_to_analytics(time.time() - start_time)
+            self._handle_exception(start_time)
             return self.result
         
         status_type, base_message = HTTP_STATUS_DICT.get(response.status_code, ("Error", f"⚠️ Error HTTP"))
@@ -165,6 +165,53 @@ class URLManager(BaseManager):
         
         return self.result
 
+    def _handle_exception(self, start_time):
+        """Manejar excepción usando datos centralizados"""
+        request_data, response_data, request_metadata = self._create_exception_data(start_time, self.result)
+        
+        # Asignar como atributos para que los tests los encuentren
+        self.request_data = request_data
+        self.response_data = response_data
+        self.request_metadata = request_metadata
+        
+        self._send_to_analytics(request_data, response_data, request_metadata)
+    
+    def _create_exception_data(self, start_time, error_result):
+        """
+        Crear datos de excepción para analytics
+        
+        Args:
+            start_time: Tiempo de inicio
+            error_result: Tupla (status, message)
+        
+        Returns:
+            tuple: (request_data, response_data, request_metadata)
+        """
+        import time
+        request_data = {
+            "target": getattr(self, 'target', None),
+            "protocol": getattr(self, 'protocol', None),
+            "port": getattr(self, 'port', None),
+            "timeout": getattr(self, 'timeout', None),
+            "retries": getattr(self, 'retries', None)
+        }
+        response_data = {
+            'response_time': time.time() - start_time,
+            "allow_redirects": getattr(self, 'allow_redirects', None),
+            "verify_ssl": getattr(self, 'verify_ssl', None),
+            'status_code': None,
+            'content_length': None,
+            'redirect_count': None,
+            'headers': None
+        }
+        request_metadata = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "type": "url",
+            "status": error_result[0],
+            "error_type": self._extract_error_type(error_result[1]) if hasattr(self, '_extract_error_type') else None
+        }
+        return request_data, response_data, request_metadata
+    
     def set_analytics_callback(self, manager):
         """Configurar callback para analytics"""
         self.analytics_callback = manager

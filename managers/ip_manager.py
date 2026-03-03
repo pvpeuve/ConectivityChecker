@@ -114,19 +114,19 @@ class IPManager(BaseManager):
             sock.close()
         except ValueError:
             self.result = ("Error", "❌ Formato inválido: Debe ser <IP> : <PUERTO>")
-            self._send_to_analytics(time.time() - start_time)
+            self._handle_exception(start_time)
             return self.result
         except socket.timeout:
             self.result = ("Error", f"❌ Timeout conectando a {self.target}")
-            self._send_to_analytics(time.time() - start_time)
+            self._handle_exception(start_time)
             return self.result
         except socket.error as e:
             self.result = ("Error", f"❌ Error de socket: {str(e)}")
-            self._send_to_analytics(time.time() - start_time)
+            self._handle_exception(start_time)
             return self.result
         except Exception as e:
             self.result = ("Error", f"❌ Error de conexión: {str(e)}")
-            self._send_to_analytics(time.time() - start_time)
+            self._handle_exception(start_time)
             return self.result
         status_type, message_template = SOCKET_STATUS_DICT.get(
             socket_result, 
@@ -166,6 +166,50 @@ class IPManager(BaseManager):
         
         return self.result
 
+    def _handle_exception(self, start_time):
+        """Manejar excepción usando datos centralizados"""
+        request_data, response_data, request_metadata = self._create_exception_data(start_time, self.result)
+        
+        # Asignar como atributos para que los tests los encuentren
+        self.request_data = request_data
+        self.response_data = response_data
+        self.request_metadata = request_metadata
+        
+        self._send_to_analytics(request_data, response_data, request_metadata)
+    
+    def _create_exception_data(self, start_time, error_result):
+        """
+        Crear datos de excepción para analytics
+        
+        Args:
+            start_time: Tiempo de inicio
+            error_result: Tupla (status, message)
+        
+        Returns:
+            tuple: (request_data, response_data, request_metadata)
+        """
+        import time
+        request_data = {
+            "target": getattr(self, 'target', None),
+            "protocol": getattr(self, 'protocol', None),
+            "port": getattr(self, 'port', None),
+            "timeout": getattr(self, 'timeout', None),
+            "retries": getattr(self, 'retries', None)
+        }
+        response_data = {
+            'response_time': time.time() - start_time,
+            'socket_code': None,
+            'host_info': None,
+            'connection_type': None
+        }
+        request_metadata = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "type": "ip",  
+            "status": error_result[0],
+            "error_type": self._extract_error_type(error_result[1]) if hasattr(self, '_extract_error_type') else None
+        }
+        return request_data, response_data, request_metadata
+    
     def set_analytics_callback(self, manager):
         """Configurar callback para analytics"""
         self.analytics_callback = manager
