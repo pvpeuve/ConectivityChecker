@@ -36,6 +36,7 @@ class URLManager(BaseManager):
             allow_redirects (bool, optional): Permitir redirecciones. Defaults to None
             verify_ssl (bool, optional): Verificar certificados SSL. Defaults to None
         """
+
         # Asignar componentes (dejar None si es Manual)
         self.url_address = url_address
         self.protocol = protocol if protocol != "Manual" else None
@@ -65,7 +66,7 @@ class URLManager(BaseManager):
         """
         if self.url_address is None:
             raise ValueError("url_address cannot be None or empty")
-        
+
         # Construir lista de componentes (solo los que no son None)
         components = [
             self.protocol + "://" if self.protocol else "",
@@ -130,9 +131,37 @@ class URLManager(BaseManager):
         
         status_type, base_message = HTTP_STATUS_DICT.get(response.status_code, ("Error", f"⚠️ Error HTTP"))
         self.result = (status_type, f"{base_message}: {response.status_code}")
+
+        # Guardar los datos de la entrada para acceso externo
+        self.request_data = {
+            "target": self.target,
+            "protocol": self.protocol,
+            "port": self.port,
+            "timeout": self.timeout,
+            "retries": self.retries,
+            "allow_redirects": self.allow_redirects,
+            "verify_ssl": self.verify_ssl
+        }
+
+        # Guardar los datos de la respuesta para acceso externo
+        self.response_data = {
+            'status_code': response.status_code,
+            'content_length': len(response.content),
+            'redirect_count': len(response.history),
+            'headers': dict(response.headers),
+            'response_time': response.elapsed.total_seconds()
+        }
+
+        # Guardar los datos de metadata para acceso externo
+        self.request_metadata = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "type": "url",
+            "status": self.result[0],
+            "error_type": self._extract_error_type(self.result[1]) if self.result[0] == "Error" else None
+        }
         
         # Enviar a analytics
-        self._send_to_analytics(time.time() - start_time)
+        self._send_to_analytics(self.request_data, self.response_data, self.request_metadata)
         
         return self.result
 
@@ -155,21 +184,12 @@ class URLManager(BaseManager):
         else:
             return "unknown"
     
-    def _send_to_analytics(self, response_time):
+    def _send_to_analytics(self, request_data, response_data, request_metadata):
         """Enviar datos a analytics si hay callback configurado"""
+
         if hasattr(self, 'analytics_callback') and self.analytics_callback:
-            import time
-            analytics_data = {
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "type": "url",
-                "target": self.target,
-                "status": self.result[0],
-                "response_time": response_time,
-                "protocol": self.protocol,  
-                "port": self.port,        
-                "error_type": self._extract_error_type(self.result[1]) if self.result[0] == "Error" else None
-            }
-            self.analytics_callback.add_data(analytics_data)
+            complete_data = {**self.request_data, **self.response_data, **self.request_metadata}
+            self.analytics_callback.add_data(complete_data)
 
 if __name__ == "__main__":
     url_manager = URLManager()

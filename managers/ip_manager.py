@@ -108,6 +108,8 @@ class IPManager(BaseManager):
             ip, port = self.target.split(":")
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(self.timeout or 3)
+            # Actualizar self.port con el puerto real del target
+            self.port = int(port)
             socket_result = sock.connect_ex((ip, int(port)))
             sock.close()
         except ValueError:
@@ -133,9 +135,34 @@ class IPManager(BaseManager):
         # Reemplazar placeholders en el mensaje
         message = message_template.format(port=port, ip=ip)
         self.result = (status_type, message)
+
+        # Guardar los datos de la entrada para acceso externo
+        self.request_data = {
+            "target": self.target,
+            "protocol": self.protocol,
+            "port": self.port,
+            "timeout": self.timeout,
+            "retries": self.retries
+        }
+
+        # Guardar los datos de la respuesta para acceso externo
+        self.response_data = {
+            'socket_code': socket_result,
+            'response_time': time.time() - start_time,
+            'host_info': socket.gethostbyname(ip) if ':' not in ip else ip,
+            'connection_type': 'IPv4' if '.' in ip else 'IPv6'
+        }
+
+        # Guardar los datos de metadata para acceso externo
+        self.request_metadata = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "type": "ip",
+            "status": self.result[0],
+            "error_type": self._extract_error_type(self.result[1]) if self.result[0] == "Error" else None
+        }
         
         # Enviar a analytics
-        self._send_to_analytics(time.time() - start_time)
+        self._send_to_analytics(self.request_data, self.response_data, self.request_metadata)
         
         return self.result
 
@@ -156,21 +183,11 @@ class IPManager(BaseManager):
         else:
             return "unknown"
     
-    def _send_to_analytics(self, response_time):
+    def _send_to_analytics(self, request_data, response_data, request_metadata):
         """Enviar datos a analytics si hay callback configurado"""
         if hasattr(self, 'analytics_callback') and self.analytics_callback:
-            import time
-            analytics_data = {
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "type": "ip",
-                "target": self.target,
-                "status": self.result[0],
-                "response_time": response_time,
-                "protocol": self.protocol,
-                "port": self.port,
-                "error_type": self._extract_error_type(self.result[1]) if self.result[0] == "Error" else None
-            }
-            self.analytics_callback.add_data(analytics_data)
+            complete_data = {**request_data, **response_data, **request_metadata}
+            self.analytics_callback.add_data(complete_data)
 
 if __name__ == "__main__":
     ip_manager = IPManager()
