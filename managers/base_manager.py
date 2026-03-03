@@ -28,3 +28,7 @@ class BaseManager:
     def _send_to_analytics(self, response_time):
         """Enviar datos a analytics si hay callback configurado"""
         raise NotImplementedError("Subclass must implement _send_to_analytics")
+
+    def _create_exception_data(self, start_time, error_result):
+        """Crear datos de excepción para analytics"""
+        raise NotImplementedError("Subclass must implement _create_exception_data")
